@@ -135,7 +135,15 @@ pricna   - (v,u), v - visited, u - closed, order(v) > order(u)
 
 - Cycle Detection
 
-- Bridge Detection
+Run DFS: cycle condition "if (visited\[neighbour_u\] && (neighbour_u != parent[u]))".
+
+- Bridge Detection (and Articulation points)
+
+Run DFS, for each vertex *v* keep track of:
+* entry_time\[v\]
+* low\[v\] = min(entry_time\[v\], entry_time\[back_u\], low\[tree_w\]), where
+back_u - all neighbours u_i connected by back edges
+tree_w - all neighbours w_j connected by tree edges
 
 
 
@@ -148,7 +156,35 @@ pricna   - (v,u), v - visited, u - closed, order(v) > order(u)
 *Complexity*: O(|V| + |E|)
 
 ```
-Algorithm goes here
+order(graph: Graph):
+    # vertex list to output
+    order[];
+    # 0 - unvisited, 1 - temporary, 2 - permanent
+    visited[] = 0
+    while exists vertex v, visited[v] != 2:
+        visit(v)
+    
+    return order
+#
+
+visit(v:vertex, order:list):
+    # permanent
+    if visited[v] == 2:
+        return
+    # cycle
+    if visited[v] == 1:
+        stop
+
+    # mark as temporary
+    visited[v] = 1
+    
+    # proceed with children
+    for each u in neighbour(v):
+        visit(u)
+    
+    # if success - mark as permanent
+    visited[v] = 2
+    order.push_front(v)
 ```
 
 - Applications:
@@ -162,9 +198,8 @@ Algorithm goes here
 *Usage*: Find Strongly Connected Components in a graph using DFS
 *Complexity*: O(|V| + |E|)
 
-```
-Algorithm goes here
-```
+* Run DFS and compute exit time tout[v] for each vertex v (reverse topological sort)
+* Run DFS to build transposed graph on vertices in decresing order of tout[] 
 
 
 
@@ -181,9 +216,9 @@ Algorithm goes here
     * pred[v] - undefined
     * queue.add_with_priority(v, dist[v]) 
 * While queue is not empty
-    * v = get min from queue
+    * v = queue.extract_min()
     * for each neighbour u of v: 
-        * if possible relax dist[u] and decrease u's priority to new distance
+        * if possible relax dist[u] and decrease u's priority to new distance and pred\[u\] = v
 * return dist[] and pred[]
 
 - Proof:
@@ -205,8 +240,8 @@ Shortest path through unvisited node cannot exist (or u isn't min), and through 
     * dist[v] - infinity
     * pred[v] - undefined
 * repeat |V| - 1 times:
-    * for every edge e:
-        * relax e
+    * for every edge e=(v,u):
+        * relax e (improve dist\[u\] with dist\[v\] + cost[e] if possible) and pred\[u\] = v
 * check for negative loop: e=(u,v)
     * if weight can still improve some edge - detect negative cycle
 * return dist[] and pred[]
@@ -248,25 +283,40 @@ To detect negative cycles inspect the diagonal entries: negative value = negativ
 *Complexity*: O(|E| + |V| log |V|) - Fibonacci heap + Adj list
 
 * Initialise:
-    * cost[v] - cheapest connection cost to v - infinity
-    * edge[v] - edge of the cheapest connection - null
+    * cost\[v\] - cheapest connection cost to v - infinity
+    * edge\[v\] - edge of the cheapest connection - null
     * F - forrest - empty
     * Q - vertices not in the forrest - V
 * repeat until Q is not empty:
-    * find v with min cost[v]
+    * find v with min cost\[v\]
     * add v to F
     * for each u in neighbour(v):
         * if u is in Q:
-            * cost[u] = weight(v,u)
-            * edge[u] = (v,u)
+            * cost\[u\] = weight(v,u)
+            * edge\[u\] = (v,u)
 * return F
 
 - Boruvka:
 
 *Usage*: min span tree in weighted undirected graph
 
- 1. Initialise
- 1. F - forrest - (V, E'={})
+* Initialise
+    * F - forrest - (V, E'={}) - components
+    * cheapest\[C\] = None - cheapest edge of a component
+* while not completed:
+    * for each edge e=(u,v), s.t. u in Ci, v in Cj:
+        * ei = cheapest\[Ci\]
+        * if is_prefferred_over(e, ei)
+            * cheapest\[Ci\] = e
+        * ej = cheapest\[Cj\]
+        * if is_prefferred_over(e, ej)
+            * cheapest\[Cj\] = e
+    * if cheapest\[C\] = None for all C
+        * completed = true
+    * else
+        * completed = false
+        * for each component C, cheapest\[C\] != None:
+            * Add cheapest\[C\] to E'
 ...
 
 
@@ -442,8 +492,34 @@ T(N) = 7T(N/2) + O(N^2)
 **B5-6**: Dynamic Programming
 ---
 - Longest Increasing Subsequence
+
+Input:
+⁃ sequence[] - input data
+
+distance[i] - LIS of sequence[0-i]
+* distance[i] = 1: subsequence consists of single sequence[index] element
+* distance[i] = distance[j] + 1: find largest distance[j] in 0,...,i-1, s.t. sequence[j] < sequence[i]
+
     and
     - Edit Distance
+    
+Input:
+* sequence1[] - of length M
+* sequence2[] - of length N
+* operations costs (optional)
+
+table[i][j] - smallest edit distance of sequence1[i] and sequence2[j]
+    * d[i][0] = sum of costs for delete sequence1[i] for every i
+    * d[0][j] = sum of costs for insert sequence2[j] for every j
+    * d[i][j] = 
+        * d[i-1][j-1] if no change
+        * min(
+            * d[i-1][j] + cost of delete sequence1[i]
+            * d[i][j-1] + cost of insert sequence2[j]
+            * d[i-1][j-1] + cost of substitute two characters
+        * )
+new operation => new statement in min clause
+
         or
     - Optimal BST construction
 
